@@ -32,5 +32,5 @@ After training is finished, evaluate the model on a test set using the following
 ```
 pmodel.test("sample_test_set.tsv", save_path='stats.txt')
 ```
-You should see text content in this format in the file specificed by ```save_path```. Overall f1 scores are included, along with more fine-grained statistics on model performance for each label <br>
+You should see text content in this format in the file specificed by ```save_path```. Overall f1 scores are included, along with more fine-grained statistics on model performance for each label <br> <br>
 <img width="601" alt="image" src="https://user-images.githubusercontent.com/42917263/188069319-1d48df38-8db5-44f8-894e-0e42fe3b1f81.png">
