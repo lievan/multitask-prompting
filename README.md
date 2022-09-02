@@ -18,3 +18,19 @@ A prompt definition would contain: <br>
 2) A policy function for each task. The policy function maps the token that the model uses to fill in the blank with the predicted label.
 
 My experiments trained a Roberta model to accomplish the exact tasks mentioned above - you can take a look at some example predictions in the <b>prompting_example.ipynb</b> notebook
+
+## Training and Testing
+First, load a base model. A GPU as the device is highly reccomended.
+```
+pmodel = RobertaPrompt(model='roberta-large', device = torch.device('cuda'), prompt = argument_prompt)
+```
+Start training immediately by specifying the paths to a training and validation dataset. Training statistics will be displayed in stdout.
+```
+pmodel.train("sample_train_set.tsv", "sample_val_set.tsv", output_dir="sample_model", epochs=10)
+```
+After training is finished, evaluate the model on a test set using the following function and save the test results
+```
+pmodel.test("sample_test_set.tsv", save_path='stats.txt')
+```
+You should see text content in this format in the file specificed by ```save_path``` <br>
+<img width="601" alt="image" src="https://user-images.githubusercontent.com/42917263/188069319-1d48df38-8db5-44f8-894e-0e42fe3b1f81.png">
