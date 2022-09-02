@@ -2,7 +2,7 @@
 
 ### Overview
 
-Prompting uses the capability of large language models (LLM's) to "fill in the missing text" in order to classify the meaning of text. I conducted research on how a single model can use prompting to simultaneously learn multiple tasks. [RoBERTa](https://arxiv.org/abs/1907.11692) was the primary model I experimented with. Here are the [results](https://urf.columbia.edu/sites/default/files/symposium/LI%20Evan-%20Poster.pdf).
+Prompting uses the capability of large language models (LLM's) to "fill in the blank" in order to classify the meaning of text. I conducted research on how a single model can use prompting to simultaneously learn multiple tasks. [RoBERTa](https://arxiv.org/abs/1907.11692) was the primary model I experimented with. Here are the [results](https://urf.columbia.edu/sites/default/files/symposium/LI%20Evan-%20Poster.pdf).
 
 ### RobertaPrompt
 
