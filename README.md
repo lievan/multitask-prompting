@@ -3,6 +3,13 @@
 ### Overview
 
 Prompting uses the capability of large language models (LLM's) to "fill in the blank" in order to classify the meaning of text. I conducted research on how a single model can use prompting to simultaneously learn multiple tasks. [RoBERTa](https://arxiv.org/abs/1907.11692) was the primary model I experimented with. Here are the [results](https://urf.columbia.edu/sites/default/files/symposium/LI%20Evan-%20Poster.pdf). This repository contains the code I used to train and evaluate models during my experiments.
+<br>
+
+Here is a diagram from [this paper](https://aclanthology.org/2021.acl-long.295.pdf) that explains the difference between prompting and head-based fine-tuning for language models.
+<img width="1157" alt="image" src="https://user-images.githubusercontent.com/42917263/188295612-225713b2-688d-4cdb-b92e-09f2a62b6059.png">
+The paper [How Many Data Points is a Prompt Worth?](https://arxiv.org/pdf/2103.08493.pdf) performs some cool experiments showing the power of prompts in low resource settings.
+<br>
+
 
 ### RobertaPrompt
 
@@ -33,4 +40,7 @@ After training is finished, evaluate the model on a test set using the following
 pmodel.test("sample_test_set.tsv", save_path='stats.txt')
 ```
 You should see text content in this format in the file specificed by ```save_path```. Overall f1 scores are included, along with more fine-grained statistics on model performance for each label <br> <br>
-<img width="601" alt="image" src="https://user-images.githubusercontent.com/42917263/188069319-1d48df38-8db5-44f8-894e-0e42fe3b1f81.png">
+<img width="465" alt="image" src="https://user-images.githubusercontent.com/42917263/188295865-3158d842-d84d-4aec-b432-0eebfac4b141.png">
+
+### Data
+Sample data for fallacious argument and stance detection is from [Argotario](https://aclanthology.org/D17-2002/).
