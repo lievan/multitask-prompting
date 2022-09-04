@@ -12,16 +12,31 @@ from transformers import RobertaTokenizer, RobertaForMaskedLM, AdamWeightDecay, 
 
 class Prompt:
     # A class to format train and test samples for prompting.
-    # Provides a layer of abstraction so that RobertaPrompt works for many types of user-defined prompts
+    # Provides an interface that RobertaPrompt uses to format train and test data.
     def __init__(self, templates: dict, policy_functions: dict):
         self.templates = templates
         self.policy_fn = policy_functions
+        self.state_str = self.__str__()
     def test_sample(self, inputs: list, task: str) -> str:
-        return self.templates[task].format(*inputs, "<mask>")
+        return self.templates[task].format(*inputs)
     def train_sample(self, inputs: list, label: str, task: str) -> str:
-        return self.templates[task].format(*inputs, label)
+        sample = self.templates[task].format(*inputs, label)
+        return sample.replace("<mask>", label)
     def get_prediction(self, pred: str, task: str) -> str:
         return self.policy_fn[task](pred)
+    def add_task(self, task_name: str, task_template: str, policy_function):
+        self.policy_fn[task_name] = policy_function
+        self.templates[task_name] = task_template
+        self.state_str = self.__str__()
+    def remove_task(self, task_name):
+        del self.policy_fn[task_name]
+        del self.templates[task_name]
+        self.state_str = self.__str__()
+    def __str__(self):
+        tasks = ["Task: {}, Template: {}".format(task, template) for task, template in self.templates.items()]
+        return "=== Prompts ===\n" + "\n".join(tasks)
+        
+
 
 class RobertaPrompt:
     def __init__(self, device: torch.device, prompt: Prompt, model='roberta-large', new_tokens = None, max_length = 512):
@@ -52,12 +67,13 @@ class RobertaPrompt:
             this method assumes that 'sent' is in the correct formatted prompt
         '''
         sent = self.prompt.test_sample(inputs, task)
-        pred = self._infer(sent)
-        return self.prompt.get_prediction(pred, task)
+        preds = self._infer(sent)
+        return self.prompt.get_prediction(preds, task)
 
     def _infer(self, sent: str):
         '''
             helper function for infer(self, inputs: list, task: str) -> str:
+            takes a raw str and fills in the <mask> tokens
         '''
         token_ids = self.tokenizer.encode(sent, return_tensors='pt').to(self.device)
         masked_position = (token_ids.squeeze() == self.tokenizer.mask_token_id).nonzero()
@@ -68,19 +84,15 @@ class RobertaPrompt:
 
         last_hidden_state = output[0].squeeze()
 
-        list_of_list =[]
-        for _ , mask_index in enumerate(masked_pos):
+        preds = []
+        for mask_index in masked_pos:
             mask_hidden_state = last_hidden_state[mask_index]
-            idx = torch.topk(mask_hidden_state, k=1, dim=0)[1]
-            words = [self.tokenizer.decode(i.item()).strip() for i in idx]
-            list_of_list.append(words)
-
-        best_guess = ""
-        for j in list_of_list:
-            best_guess = best_guess+" "+j[0]
-        return best_guess.strip()
+            masked_idx = torch.topk(mask_hidden_state, k=1, dim=0)[1]
+            masked_word = self.tokenizer.decode(masked_idx.item()).strip()
+            preds.append(masked_word)
+        return preds[0] #currently assume only one masked token for classification tasks - add on to make in future
   
-    def test(self, test_set: list, save_path='stats.txt') -> str:
+    def test(self, test_set: str, save_path='stats.txt') -> str:
 
         '''
             this method returns f1 score, precision, recall, and accuracy
@@ -88,20 +100,21 @@ class RobertaPrompt:
         '''
         y_preds = []
         y_true = []
-
-        for sample in test_set:
-            label, task = sample[-2:]
-            inputs = sample[:-2]
-            pred = self.infer(inputs, task)
-            y_preds.append(pred)
-            y_true.append(label)
+        with open(test_set, 'r') as f:
+            samples = csv.reader(f, delimiter='\t')
+            for sample in samples:
+                label, task = sample[-2:]
+                inputs = sample[:-2]
+                pred = self.infer(inputs, task)
+                y_preds.append(pred)
+                y_true.append(label)
 
         stats = []
         stats.append("macro f1: " + str(f1_score(y_true, y_preds, average='macro')))
         stats.append("micro f1: " + str(f1_score(y_true, y_preds, average='micro')))
-        stats.append('\n' + "weighted f1: " + str(f1_score(y_true, y_preds, average='weighted')))
-        stats.append('\n' + classification_report(y_true, y_preds))
-        stats = "".join(stats)
+        stats.append("weighted f1: " + str(f1_score(y_true, y_preds, average='weighted')))
+        stats.append(classification_report(y_true, y_preds))
+        stats = "\n".join(stats)
 
         with open(save_path, 'w') as f:
             f.write(stats)
@@ -259,7 +272,7 @@ class RobertaPrompt:
 
         return training_stats
 
-    def load_training_data(self, train, val):
+    def load_training_data(self, train: str, val: str):
         '''
             helper function for train
         '''
@@ -277,8 +290,6 @@ class RobertaPrompt:
                 label, task = sample[-2:]
                 inputs = sample[:-2]
                 val_arr.append([self.prompt.test_sample(inputs, task), self.prompt.train_sample(inputs, label, task)])
-        print(train_arr)
-        print(val_arr)
         return self.get_dloaders(train_arr, val_arr)
 
     def get_dloaders(self, train, val):
@@ -303,9 +314,9 @@ class RobertaPrompt:
 
         return train_dataloader , validation_dataloader
 
-    def encode_data(self, dataset):
+    def encode_data(self, dataset: list):
         '''
-            helper function for train
+            helper function for train - uses tokenizer to encode a text dataset
         '''
         input_ids = []
         attention_masks = []
@@ -341,10 +352,8 @@ class RobertaPrompt:
         return dataset
 
     
-    def __str__(self):
+    def __str__(self) -> str:
         base = self.base_type
-        tasks = ["Task: {}, Template: ".format(task, template) for task, template in self.prompt.template.values()]
-        ret =  "======== Base Model ============\n{}\n\n======== Tasks ============\n{}\n".format(base, tasks)
-        if self.output_dir:
-            ret += "Model directory: ".format(self.output_dir)
+        tasks = ["Task: {}, Template: {}".format(task, template) for task, template in self.prompt.templates.items()]
+        ret =  "======== Base Model ============\n{}\n\n======== Tasks ============\n{}\n".format(base, "\n".join(tasks))
         return ret
