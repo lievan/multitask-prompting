@@ -155,7 +155,7 @@ class RobertaPrompt:
 
         training_stats = {}
 
-        total_t0 = time.time()
+        start_time = time.time()
 
         best_val_loss = float('inf')
 
@@ -164,7 +164,7 @@ class RobertaPrompt:
             print('======== Epoch {:} / {:} ========'.format(epoch + 1, epochs))
             print('Training...')
 
-            t0 = time.time()
+            epoch_start = time.time()
 
             total_train_loss = 0
 
@@ -173,7 +173,7 @@ class RobertaPrompt:
                 # Have updates to the training process
                 if step % 40 and not step == 0:
                     # Calculate elapsed time in minutes.
-                    elapsed = format_time(time.time() - t0)
+                    elapsed = format_time(time.time() - epoch_start)
                     # Report progress.
                     print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
 
@@ -207,14 +207,14 @@ class RobertaPrompt:
             # Calculate the average loss over all of the batches.
             avg_train_loss = total_train_loss / len(train_dataloader)
             # Measure how long this epoch took.
-            training_time = format_time(time.time() - t0)
+            training_time = format_time(time.time() - epoch_start)
             print("")
             print("  Average training loss: {0:.2f}".format(avg_train_loss))
             print("  Training epcoh took: {:}".format(training_time))
             print("")
             print("Running Validation...")
 
-            t0 = time.time()
+            val_start = time.time()
             # eval mode during validation
             self.model.eval()
 
@@ -252,7 +252,7 @@ class RobertaPrompt:
                   save_model(output_dir)
 
                 # Measure how long the validation run took.
-                validation_time = format_time(time.time() - t0)
+                validation_time = format_time(time.time() - val_start)
                 print("  Validation Loss: {0:.2f}".format(avg_val_loss))
                 print("  Validation took: {:}".format(validation_time))
 
@@ -265,10 +265,10 @@ class RobertaPrompt:
                     }
         print("")
         print("Training complete!")
-        print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
+        print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-start_time)))
 
         with open(output_dir + '/training_stats', 'w') as f:
-          dump = json.dump(training_stats, f, indent=4)
+            json.dump(training_stats, f, indent=4)
 
         return training_stats
 
