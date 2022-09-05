@@ -7,8 +7,9 @@ import datetime
 import os
 import json
 from sklearn.metrics import f1_score, classification_report
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset, random_split
-from transformers import RobertaTokenizer, RobertaForMaskedLM, AdamW, get_linear_schedule_with_warmup
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
+from torch.optim import AdamW
+from transformers import RobertaTokenizer, RobertaForMaskedLM, get_linear_schedule_with_warmup
 
 class Prompt:
     # A class to format train and test samples for prompting.
@@ -328,16 +329,16 @@ class RobertaPrompt:
                                 masked,                     
                                 add_special_tokens = True, # Add '[CLS]' and '[SEP]'
                                 max_length = 128,           # Pad & truncate all sentences.
-                                pad_to_max_length = True,
+                                padding='max_length',
                                 return_attention_mask = True,   # Construct attn. masks.
                                 return_tensors = 'pt',     # Return pytorch tensors.
                                 truncation="longest_first"
-                        )
+                            )
             label = self.tokenizer.encode_plus(
                             label,                     
                             add_special_tokens = True, # Add '[CLS]' and '[SEP]'
                             max_length = 128,           # Pad & truncate all sentences.
-                            pad_to_max_length = True,
+                            padding='max_length',
                             return_attention_mask = True,   # Construct attn. masks.
                             return_tensors = 'pt',     # Return pytorch tensors.
                             truncation="longest_first"
