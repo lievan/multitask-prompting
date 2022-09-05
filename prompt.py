@@ -8,7 +8,7 @@ import os
 import json
 from sklearn.metrics import f1_score, classification_report
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset, random_split
-from transformers import RobertaTokenizer, RobertaForMaskedLM, AdamWeightDecay, WarmUp
+from transformers import RobertaTokenizer, RobertaForMaskedLM, AdamW, get_linear_schedule_with_warmup
 
 class Prompt:
     # A class to format train and test samples for prompting.
@@ -92,7 +92,7 @@ class RobertaPrompt:
             preds.append(masked_word)
         return preds[0] #currently assume only one masked token for classification tasks - add on to make in future
   
-    def test(self, test_set: str, save_path='stats.txt') -> str:
+    def test(self, test_set: str, save_path='test_results.txt') -> str:
 
         '''
             this method returns f1 score, precision, recall, and accuracy
@@ -127,12 +127,10 @@ class RobertaPrompt:
             a train set and a test set
         '''
         self.output_dir = output_dir
-        optimizer = AdamWeightDecay(learning_rate = 2e-5, # args.learning_rate - default is 5e-5, our notebook had 2e-5
-                                    epsilon = 1e-8 # args.adam_epsilon  - default is 1e-8.
-                                    )
+        optimizer = AdamW(self.model.parameters(), lr = 2e-5, eps = 1e-8)
         train_dataloader, val_dataloader = self.load_training_data(train_path, val_path)
 
-        scheduler = WarmUp(initial_learning_rate  = 2e-5, decay_schedule_fn = optimizer, warmup_steps = 0)
+        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps = 0, num_training_steps = len(train_dataloader) * epochs)
 
         def format_time(elapsed):
             elapsed_rounded = int(round((elapsed)))
@@ -168,10 +166,12 @@ class RobertaPrompt:
 
             total_train_loss = 0
 
+            self.model.train()
+  
             for step, batch in enumerate(train_dataloader):
 
                 # Have updates to the training process
-                if step % 40 and not step == 0:
+                if step % 10 == 0 and not step == 0:
                     # Calculate elapsed time in minutes.
                     elapsed = format_time(time.time() - epoch_start)
                     # Report progress.
@@ -246,23 +246,23 @@ class RobertaPrompt:
 
                 avg_val_loss = total_eval_loss / len(val_dataloader)
   
-                if avg_val_loss <= best_val_loss:
+                if avg_val_loss < best_val_loss:
                   print("SAVING NEW MODEL ... ")
                   best_val_loss = avg_val_loss
                   save_model(output_dir)
 
-                # Measure how long the validation run took.
-                validation_time = format_time(time.time() - val_start)
-                print("  Validation Loss: {0:.2f}".format(avg_val_loss))
-                print("  Validation took: {:}".format(validation_time))
+            # Measure how long the validation run took.
+            validation_time = format_time(time.time() - val_start)
+            print("  Validation Loss: {0:.2f}".format(avg_val_loss))
+            print("  Validation took: {:}".format(validation_time))
 
-                # Record all statistics from this epoch.
-                training_stats[epoch+1] = {
-                        'Training Loss': avg_train_loss,
-                        'Valid. Loss': avg_val_loss,
-                        'Training Time': training_time,
-                        'Validation Time': validation_time
-                    }
+            # Record all statistics from this epoch.
+            training_stats[epoch+1] = {
+                    'Training Loss': avg_train_loss,
+                    'Valid. Loss': avg_val_loss,
+                    'Training Time': training_time,
+                    'Validation Time': validation_time
+                }
         print("")
         print("Training complete!")
         print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-start_time)))
