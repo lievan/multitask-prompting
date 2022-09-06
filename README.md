@@ -42,5 +42,7 @@ pmodel.test("sample_test_set.tsv", save_path='stats.txt')
 You should see text content in this format in the file specificed by ```save_path```. Overall f1 scores are included, along with more fine-grained statistics on model performance for each label <br> <br>
 <img width="465" alt="image" src="https://user-images.githubusercontent.com/42917263/188295865-3158d842-d84d-4aec-b432-0eebfac4b141.png">
 
+One can then use this model and fine-tune it on other tasks with different prompts.
+
 ### Data
 Sample data for fallacious argument and stance detection is from [Argotario](https://aclanthology.org/D17-2002/).
